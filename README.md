@@ -179,7 +179,7 @@ usbcan.sendCanBusMessage(false, 418053888, true, new Buffer([0x00, 0xee, 0x00]))
 
   * `usbcan` must be opened
   * `rtr` is optional (default: `false`)
-  * `extendedCanId` is optional (default: detected based on canId length)
+  * `extendedCanId` is optional (default: detected based on `canId` length)
   * `canData` is optional (default: empty `Buffer`)
 
 #### Event: 'canbusmessage'

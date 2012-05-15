@@ -54,7 +54,7 @@ usbcan.switchToMainCode(function(err) {
 
   // Or, equivalent:
   // var rtr = false; // Remote Transmission Request
-  // var extendedCanId = true; // Remote Transmission Request
+  // var extendedCanId = true;
   // usbcan.sendCanBusMessage(rtr, canId, extendedCanId, canData); // rtr, extendedCanId and canData are optional arguments
 });
 
