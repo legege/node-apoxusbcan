@@ -16,7 +16,7 @@
     "install": "node-gyp configure build"
   },
   "dependencies": {
-    "bindings": "0.3.*"
+    "bindings": "0.3.x"
   },
   "engines": {
     "node": ">=0.7.0"
