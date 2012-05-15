@@ -2,7 +2,7 @@ node-apoxusbcan
 ===============
 
 A node.js module for Apox Controls USB-CAN devices. Most important features of this device are
-supported (e.g. switching to main code, and hability to send/receive CAN Bus messages).
+supported (e.g. switching to main code, and ability to send/receive CAN Bus messages).
 
 This project has been developed with [node-xanbus](https://github.com/legege/node-xanbus) in mind.
 However, it would probably be useful for something else, hence the reason I'm releasing this module
