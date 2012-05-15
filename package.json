@@ -1,0 +1,24 @@
+{
+  "name": "apoxusbcan",
+  "version": "0.0.1",
+  "description": "Apox Controls USB-CAN module driver",
+  "author": { 
+    "name": "Georges-Etienne Legendre",
+    "email": "legege@legege.com",
+    "url": "http://legege.com"
+  },
+  "repository": { 
+    "type": "git",
+    "url": "git://github.com/legege/node-apoxusbcan.git"
+  }
+  "main": "./apoxusbcan",
+  "scripts": {
+    "install": "node-gyp configure build"
+  },
+  "dependencies": {
+    "bindings": "0.3.*"
+  },
+  "engines": {
+    "node": ">=0.7.0"
+  }
+}
