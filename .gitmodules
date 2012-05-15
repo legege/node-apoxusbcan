@@ -1,3 +1,6 @@
 [submodule "deps/libusb"]
 	path = deps/libusb
 	url = git://github.com/legege/libusb.git
+[submodule "deps/libftdi"]
+	path = deps/libftdi
+	url = git://github.com/legege/libftdi.git
