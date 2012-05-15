@@ -75,7 +75,7 @@ usbcan.close();
 #### usbcan.reset(callback)
 
 ``` js
-usbcan.switchToMainCode(function(err) {
+usbcan.reset(function(err) {
   if (err) {
     console.log('Failed to reset:', err);
     return;
@@ -90,7 +90,7 @@ usbcan.switchToMainCode(function(err) {
 ``` js
 usbcan.isMainCodeRunning(function(err) {
   if (err) {
-    console.log('Failed to switch to main code:', err);
+    console.log('Failed to determine if main code is running:', err);
     return;
   }
 });
@@ -103,7 +103,7 @@ usbcan.isMainCodeRunning(function(err) {
 ``` js
 usbcan.switchToMainCode(function(err, mainCodeRunning) {
   if (err) {
-    console.log('Failed to determine if main code is running:', err);
+    console.log('Failed to switch to main code:', err);
     return;
   }
   console.log('Is main code running?', mainCodeRunning);
@@ -160,7 +160,7 @@ usbcan.sendBoardMessageAndReceive(0x43, function(err, data) {
 });
 ```
   * It's not recommanded to use this method directly. The list of supported request commands is provided in source code.
-  * `retryCount` is optional, but not if responseMatcher is provided
+  * `retryCount` is optional, but not if `responseMatcher` is provided
   * `responseMatcher` is optional. Example of signature below.
 
 ``` js
