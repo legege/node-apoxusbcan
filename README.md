@@ -62,11 +62,15 @@ var usbcan = new ApoxUsbCan();
 usbcan.open();
 ```
 
+  * ignored if `usbcan` is already opened
+
 #### usbcan.close()
 
 ``` js
 usbcan.close();
 ```
+
+  * ignored if `usbcan` is not opened or already closed
 
 #### usbcan.reset(callback)
 
@@ -79,16 +83,20 @@ usbcan.switchToMainCode(function(err) {
 });
 ```
 
+  * `usbcan` must be opened
+
 #### usbcan.isMainCodeRunning(callback)
 
 ``` js
 usbcan.isMainCodeRunning(function(err) {
   if (err) {
-    console.log('Failed to reset:', err);
+    console.log('Failed to switch to main code:', err);
     return;
   }
 });
 ```
+
+  * `usbcan` must be opened
 
 #### usbcan.switchToMainCode(callback)
 
@@ -102,6 +110,8 @@ usbcan.switchToMainCode(function(err, mainCodeRunning) {
 });
 ```
 
+  * `usbcan` must be opened
+
 #### usbcan.getHardwareVersion(callback)
 
 ``` js
@@ -113,6 +123,8 @@ usbcan.getHardwareVersion(function(err, version) {
   console.log('Hardware version:', version);
 });
 ```
+
+  * `usbcan` must be opened
 
 #### usbcan.getFirmwareVersion(callback)
 
@@ -126,12 +138,15 @@ usbcan.getFirmwareVersion(function(err, version) {
 });
 ```
 
+  * `usbcan` must be opened
+
 #### usbcan.sendBoardMessage(requestCommand)
 
 ``` js
 usbcan.sendBoardMessage(0x43);
 ```
 
+  * It's not recommanded to use this method directly. The list of supported request commands is provided in source code.
   * `usbcan` must be opened
 
 #### usbcan.sendBoardMessageAndReceive(requestCommand, callback, [retryCount, responseMatcher])
@@ -144,7 +159,7 @@ usbcan.sendBoardMessageAndReceive(0x43, function(err, data) {
   }
 });
 ```
-
+  * It's not recommanded to use this method directly. The list of supported request commands is provided in source code.
   * `retryCount` is optional, but not if responseMatcher is provided
   * `responseMatcher` is optional. Example of signature below.
 
