@@ -150,15 +150,15 @@ v8::Handle<v8::Value> ApoxUsbCan::Open(const v8::Arguments& args)
   // Prepare emit async tasks
   input->_usbCanErrorEmitAsync.data = input;
   uv_async_init(uv_default_loop(), &input->_usbCanErrorEmitAsync, UsbCanErrorEmitter);
-  uv_unref(uv_default_loop());
+  uv_unref((uv_handle_t*)&input->_usbCanErrorEmitAsync); // allow the event loop to exit while this is running
 
   input->_boardMessageEmitAsync.data = input;
   uv_async_init(uv_default_loop(), &input->_boardMessageEmitAsync, BoardMessageEmitter);
-  uv_unref(uv_default_loop());
+  uv_unref((uv_handle_t*)&input->_boardMessageEmitAsync); // allow the event loop to exit while this is running
 
   input->_canBusMessageEmitAsync.data = input;
   uv_async_init(uv_default_loop(), &input->_canBusMessageEmitAsync, CanBusMessageEmitter);
-  uv_unref(uv_default_loop());
+  uv_unref((uv_handle_t*)&input->_canBusMessageEmitAsync); // allow the event loop to exit while this is running
 
   input->_opened = true;
 
@@ -348,16 +348,14 @@ int ApoxUsbCan::SendCanBusMessage(bool rtr, unsigned int id, bool extendedId, un
 
 ApoxUsbCan::ApoxUsbCan() : ObjectWrap()
 {
+  _opened = false;
+  _usbRead = false;
   ftdi_init(&_ftdic);
   uv_mutex_init(&_usbWriteMutex);
 }
 
 ApoxUsbCan::~ApoxUsbCan()
 {
-  if (_opened) {
-    uv_unref(uv_default_loop());
-  }
-
   uv_mutex_destroy(&_usbWriteMutex);
   ftdi_deinit(&_ftdic);
 }
@@ -371,7 +369,10 @@ void ApoxUsbCan::UsbReadThread(void* arg)
   int rxFrameLength = 0;
   unsigned char rxFrameChecksum = 0;
 
-  uv_ref(uv_default_loop());
+  // Simply hold a reference on the default loop
+  uv_prepare_t h;
+  uv_prepare_init(uv_default_loop(), &h);
+  uv_prepare_start(&h, NULL);
 
   while (input->_usbRead) {
     unsigned char inByte = -1;
@@ -483,7 +484,7 @@ void ApoxUsbCan::UsbReadThread(void* arg)
     }
   }
 
-  uv_unref(uv_default_loop());
+  uv_prepare_stop(&h);
 }
 
 void ApoxUsbCan::UsbCanErrorEmitter(uv_async_t* w, int status)
