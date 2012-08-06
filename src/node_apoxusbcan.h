@@ -83,6 +83,8 @@ protected:
   uv_async_t _canBusMessageEmitAsync;
   std::queue<CanBusMessage*> _canBusMessageQueue;
 
+  uv_prepare_t _loopHolder;
+
   uv_mutex_t _usbWriteMutex;
   
   static void UsbCanErrorEmitter(uv_async_t *w, int status);

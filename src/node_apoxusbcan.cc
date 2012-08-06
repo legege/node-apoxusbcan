@@ -160,6 +160,10 @@ v8::Handle<v8::Value> ApoxUsbCan::Open(const v8::Arguments& args)
   uv_async_init(uv_default_loop(), &input->_canBusMessageEmitAsync, CanBusMessageEmitter);
   uv_unref((uv_handle_t*)&input->_canBusMessageEmitAsync); // allow the event loop to exit while this is running
 
+  // A hack to keep a reference on the default loop, to let the read thread running in background
+  uv_prepare_init(uv_default_loop(), &input->_loopHolder);
+  uv_prepare_start(&input->_loopHolder, NULL);
+
   input->_opened = true;
 
   return scope.Close(v8::Undefined());
@@ -180,6 +184,8 @@ v8::Handle<v8::Value> ApoxUsbCan::Close(const v8::Arguments& args)
     input->_usbRead = false;
     uv_thread_join(&input->_usbReadThread);
   }
+
+  uv_prepare_stop(&input->_loopHolder);
 
   uv_mutex_lock(&input->_usbWriteMutex);
   uv_mutex_unlock(&input->_usbWriteMutex);
@@ -369,11 +375,6 @@ void ApoxUsbCan::UsbReadThread(void* arg)
   int rxFrameLength = 0;
   unsigned char rxFrameChecksum = 0;
 
-  // Simply hold a reference on the default loop
-  uv_prepare_t h;
-  uv_prepare_init(uv_default_loop(), &h);
-  uv_prepare_start(&h, NULL);
-
   while (input->_usbRead) {
     unsigned char inByte = -1;
     int bytesRead = 0;
@@ -483,8 +484,6 @@ void ApoxUsbCan::UsbReadThread(void* arg)
       rxFrameState = RX_FRAME_IDLE;
     }
   }
-
-  uv_prepare_stop(&h);
 }
 
 void ApoxUsbCan::UsbCanErrorEmitter(uv_async_t* w, int status)
