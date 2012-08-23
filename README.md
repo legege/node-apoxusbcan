@@ -1,3 +1,4 @@
+[![build status](https://secure.travis-ci.org/legege/node-apoxusbcan.png)](http://travis-ci.org/legege/node-apoxusbcan)
 node-apoxusbcan
 ===============
 
