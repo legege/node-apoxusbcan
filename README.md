@@ -8,6 +8,8 @@ This project has been developed with [node-xanbus](https://github.com/legege/nod
 However, it would probably be useful for something else, hence the reason I'm releasing this module
 independently.
 
+[![build status](https://secure.travis-ci.org/legege/node-apoxusbcan.png)](http://travis-ci.org/legege/node-apoxusbcan)
+
 Installation
 ------------
 
