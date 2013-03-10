@@ -1,6 +1,6 @@
 {
   "name": "apoxusbcan",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Apox Controls USB-CAN module driver",
   "author": { 
     "name": "Georges-Etienne Legendre",
