@@ -1,6 +1,6 @@
 {
   "name": "apoxusbcan",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "description": "Apox Controls USB-CAN module driver",
   "author": { 
     "name": "Georges-Etienne Legendre",
@@ -16,9 +16,9 @@
     "install": "node-gyp rebuild"
   },
   "dependencies": {
-    "bindings": "0.3.x"
+    "bindings": "1.1.1"
   },
   "engines": {
-    "node": ">=0.8.0"
+    "node": ">=0.10.0"
   }
 }

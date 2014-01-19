@@ -21,7 +21,7 @@
 
 var util = require('util');
 var events = require('events');
-var apoxusbcan = require('bindings')('apoxusbcan');
+var apoxusbcan = require('bindings')('apoxusbcan.node');
 
 // Make sure the addon inherit from EventEmitter
 apoxusbcan.ApoxUsbCan.prototype.__proto__ = events.EventEmitter.prototype

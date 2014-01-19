@@ -683,5 +683,5 @@ extern "C" {
   void init(v8::Handle<v8::Object> target) {
     ApoxUsbCan::Initialize(target);
   }
-  NODE_MODULE(node, init)
+  NODE_MODULE(apoxusbcan, init)
 }
