@@ -20,6 +20,7 @@
 // USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "node_apoxusbcan.h"
+#include <string.h>
 
 // Part of this work is based on examples provided on the Apox Controls
 // website (http://www.apoxcontrols.com/).
