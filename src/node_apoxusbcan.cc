@@ -41,9 +41,12 @@
       input->_usbCanErrorQueue.push(error); \
       uv_async_send(&input->_usbCanErrorEmitAsync); 
 
+using namespace node;
 
 BoardMessage* CreateBoardMessage(unsigned char* rxFrameData, int rxFrameLength);
 CanBusMessage* CreateCanBusMessage(unsigned char* rxFrameData, int rxFrameLength);
+
+Nan::Persistent<v8::Function> ApoxUsbCan::constructor;
 
 enum ReadFrameState {
   RX_FRAME_IDLE,
@@ -58,90 +61,86 @@ enum ReadFrameState {
   RX_FRAME_ERROR_BUFFER_OVERFLOW
 };
 
-static v8::Persistent<v8::FunctionTemplate> s_ct;
-static v8::Persistent<v8::String> symbol_error;
-static v8::Persistent<v8::String> symbol_boardmessage;
-static v8::Persistent<v8::String> symbol_canbusmessage;
-static v8::Persistent<v8::String> symbol_emit;
-
-void ApoxUsbCan::Initialize(v8::Handle<v8::Object> target)
+NAN_MODULE_INIT(ApoxUsbCan::Init)
 {
-  v8::HandleScope scope;
+  Nan::HandleScope scope;
 
-  // set the constructor function
-  v8::Local<v8::FunctionTemplate> t = v8::FunctionTemplate::New(ApoxUsbCan::New);
-
-  // set the node.js/v8 class name
-  s_ct = v8::Persistent<v8::FunctionTemplate>::New(t);
-  s_ct->InstanceTemplate()->SetInternalFieldCount(1);
-  s_ct->SetClassName(v8::String::NewSymbol("ApoxUsbCan"));
+  // Prepare constructor template
+  v8::Local<v8::FunctionTemplate> tpl = Nan::New<v8::FunctionTemplate>(ApoxUsbCan::New);
+  tpl->SetClassName(Nan::New("ApoxUsbCan").ToLocalChecked());
+  tpl->InstanceTemplate()->SetInternalFieldCount(1);
 
   // registers a class member functions
-  NODE_SET_PROTOTYPE_METHOD(s_ct, "open", ApoxUsbCan::Open);
-  NODE_SET_PROTOTYPE_METHOD(s_ct, "close", ApoxUsbCan::Close);
-  NODE_SET_PROTOTYPE_METHOD(s_ct, "sendBoardMessage", ApoxUsbCan::SendBoardMessage);
-  NODE_SET_PROTOTYPE_METHOD(s_ct, "sendCanBusMessage", ApoxUsbCan::SendCanBusMessage);
+  Nan::SetPrototypeMethod(tpl, "open", ApoxUsbCan::Open);
+  Nan::SetPrototypeMethod(tpl, "close", ApoxUsbCan::Close);
+  Nan::SetPrototypeMethod(tpl, "sendBoardMessage", ApoxUsbCan::SendBoardMessage);
+  Nan::SetPrototypeMethod(tpl, "sendCanBusMessage", ApoxUsbCan::SendCanBusMessage);
 
-  // define symboles
-  symbol_error = NODE_PSYMBOL("error");
-  symbol_boardmessage = NODE_PSYMBOL("boardmessage");
-  symbol_canbusmessage = NODE_PSYMBOL("canbusmessage");
-  symbol_emit = NODE_PSYMBOL("emit");
-
-  target->Set(v8::String::NewSymbol("ApoxUsbCan"),
-              s_ct->GetFunction());
+  constructor.Reset(Nan::GetFunction(tpl).ToLocalChecked());
+  Nan::Set(target, Nan::New("ApoxUsbCan").ToLocalChecked(), Nan::GetFunction(tpl).ToLocalChecked());
 }
 
-v8::Handle<v8::Value> ApoxUsbCan::New(const v8::Arguments& args)
+NAN_METHOD(ApoxUsbCan::New)
 {
-  v8::HandleScope scope;
+  Nan::HandleScope scope;
+
+  if (!info.IsConstructCall()) {
+    return Nan::ThrowTypeError("Class constructors cannot be invoked without 'new'");
+  }
 
   ApoxUsbCan* hw = new ApoxUsbCan();
-  hw->Wrap(args.This());
-  return args.This();
+  hw->Wrap(info.This());
+  info.GetReturnValue().Set(info.This());
 }
 
-v8::Handle<v8::Value> ApoxUsbCan::Open(const v8::Arguments& args)
+NAN_METHOD(ApoxUsbCan::Open)
 {
-  v8::HandleScope scope;
+  Nan::HandleScope scope;
 
-  ApoxUsbCan* input = ObjectWrap::Unwrap<ApoxUsbCan>(args.This());
+  ApoxUsbCan* input = ObjectWrap::Unwrap<ApoxUsbCan>(info.This());
 
   if (input->_opened) {
-    return scope.Close(v8::Undefined());
+    info.GetReturnValue().SetUndefined();
+    return;
   }
 
   input->_ftdic.usb_read_timeout = 378;
   input->_ftdic.usb_write_timeout = 128;
 
   if (ftdi_usb_open(&input->_ftdic, FTDI_VID, FTDI_PID) < 0) {
-    return scope.Close(ThrowException(v8::Exception::Error(v8::String::Concat(v8::String::New("Unable to open FTDI USB device: "),
-                                                                              v8::String::New(ftdi_get_error_string(&input->_ftdic))))));
+    Nan::ThrowError(v8::String::Concat(Nan::New("Unable to open FTDI USB device: ").ToLocalChecked(),
+                                       Nan::New(ftdi_get_error_string(&input->_ftdic)).ToLocalChecked()));
+    return;
   }
 
   if (ftdi_usb_reset(&input->_ftdic) < 0) {
-    return scope.Close(ThrowException(v8::Exception::Error(v8::String::Concat(v8::String::New("Unable to reset FTDI USB device: "),
-                                                                              v8::String::New(ftdi_get_error_string(&input->_ftdic))))));
+    Nan::ThrowError(v8::String::Concat(Nan::New("Unable to reset FTDI USB device: ").ToLocalChecked(),
+                                       Nan::New(ftdi_get_error_string(&input->_ftdic)).ToLocalChecked()));
+    return;
   }
 
   if (ftdi_usb_purge_buffers(&input->_ftdic) < 0) {
-    return scope.Close(ThrowException(v8::Exception::Error(v8::String::Concat(v8::String::New("Unable to purge FTDI USB buffers: "),
-                                                                              v8::String::New(ftdi_get_error_string(&input->_ftdic))))));
+    Nan::ThrowError(v8::String::Concat(Nan::New("Unable to purge FTDI USB buffers: ").ToLocalChecked(),
+                                       Nan::New(ftdi_get_error_string(&input->_ftdic)).ToLocalChecked()));
+    return;
   }
 
   if (ftdi_write_data_set_chunksize(&input->_ftdic, 2048) < 0) {
-    return scope.Close(ThrowException(v8::Exception::Error(v8::String::Concat(v8::String::New("Unable to set FTDI USB write data chunksize: "),
-                                                                              v8::String::New(ftdi_get_error_string(&input->_ftdic))))));
+    Nan::ThrowError(v8::String::Concat(Nan::New("Unable to set FTDI USB write data chunksize: ").ToLocalChecked(),
+                                       Nan::New(ftdi_get_error_string(&input->_ftdic)).ToLocalChecked()));
+    return;
   }
 
   if (ftdi_read_data_set_chunksize(&input->_ftdic, 2048) < 0) {
-    return scope.Close(ThrowException(v8::Exception::Error(v8::String::Concat(v8::String::New("Unable to set FTDI USB read data chunksize: "),
-                                                                              v8::String::New(ftdi_get_error_string(&input->_ftdic))))));
+    Nan::ThrowError(v8::String::Concat(Nan::New("Unable to set FTDI USB read data chunksize: ").ToLocalChecked(),
+                                       Nan::New(ftdi_get_error_string(&input->_ftdic)).ToLocalChecked()));
+    return;
   }
 
   if (ftdi_set_latency_timer(&input->_ftdic, 1) < 0) {
-    return scope.Close(ThrowException(v8::Exception::Error(v8::String::Concat(v8::String::New("Unable to set FTDI USB latency timer: "),
-                                                                              v8::String::New(ftdi_get_error_string(&input->_ftdic))))));
+    Nan::ThrowError(v8::String::Concat(Nan::New("Unable to set FTDI USB latency timer: ").ToLocalChecked(),
+                                       Nan::New(ftdi_get_error_string(&input->_ftdic)).ToLocalChecked()));
+    return;
   }
 
   // Launch the USB read thread
@@ -167,17 +166,19 @@ v8::Handle<v8::Value> ApoxUsbCan::Open(const v8::Arguments& args)
 
   input->_opened = true;
 
-  return scope.Close(v8::Undefined());
+  info.GetReturnValue().SetUndefined();
+  return;
 }
 
-v8::Handle<v8::Value> ApoxUsbCan::Close(const v8::Arguments& args)
+NAN_METHOD(ApoxUsbCan::Close)
 {
-  v8::HandleScope scope;
+  Nan::HandleScope scope;
 
-  ApoxUsbCan* input = ObjectWrap::Unwrap<ApoxUsbCan>(args.This());
+  ApoxUsbCan* input = ObjectWrap::Unwrap<ApoxUsbCan>(info.This());
 
   if (!input->_opened) {
-    return scope.Close(v8::Undefined());
+    info.GetReturnValue().SetUndefined();
+    return;
   }
 
   // Stop the USB read thread
@@ -193,118 +194,135 @@ v8::Handle<v8::Value> ApoxUsbCan::Close(const v8::Arguments& args)
  
   // Close USB
   if (ftdi_usb_close(&input->_ftdic) < 0) {
-    return scope.Close(ThrowException(v8::Exception::Error(v8::String::Concat(v8::String::New("Unable to close FTDI USB device: "),
-                                                                              v8::String::New(ftdi_get_error_string(&input->_ftdic))))));
+    Nan::ThrowError(v8::String::Concat(Nan::New("Unable to close FTDI USB device: ").ToLocalChecked(),
+                                       Nan::New(ftdi_get_error_string(&input->_ftdic)).ToLocalChecked()));
+    return;
   }
 
   input->_opened = false;
 
-  return scope.Close(v8::Undefined());
+  info.GetReturnValue().SetUndefined();
+  return;
 }
 
-v8::Handle<v8::Value> ApoxUsbCan::SendBoardMessage(const v8::Arguments& args)
+NAN_METHOD(ApoxUsbCan::SendBoardMessage)
 {
-  v8::HandleScope scope;
+  Nan::HandleScope scope;
 
-  ApoxUsbCan* input = ObjectWrap::Unwrap<ApoxUsbCan>(args.This());
+  ApoxUsbCan* input = ObjectWrap::Unwrap<ApoxUsbCan>(info.This());
 
   if (!input->_opened) {
-    return scope.Close(ThrowException(v8::Exception::Error(v8::String::New("Device not opened"))));
+    Nan::ThrowError("Device not opened");
+    return;
   }
 
-  if (args.Length() < 1) {
-    return scope.Close(ThrowException(v8::Exception::Error(v8::String::New("Wrong number of arguments"))));
+  if (info.Length() < 1) {
+    Nan::ThrowError("Wrong number of arguments");
+    return;
   }
 
-  if (!args[0]->IsNumber()) {
-    return scope.Close(ThrowException(v8::Exception::Error(v8::String::New("Wrong argument type"))));
+  if (!info[0]->IsNumber()) {
+    Nan::ThrowError("Wrong argument type");
+    return;
   }
 
-  unsigned int command = args[0]->ToUint32()->Value();
+  unsigned int command = info[0]->ToUint32()->Value();
 
   if (input->SendBoardMessage(command) < 0) {
     char message[512];
     snprintf(message, sizeof message, "Failed to send message: %s", ftdi_get_error_string(&input->_ftdic));
-    return scope.Close(ThrowException(v8::Exception::Error(v8::String::New(message))));
+    Nan::ThrowError(message);
+    return;
   }
 
-  return scope.Close(v8::Undefined());
+  info.GetReturnValue().SetUndefined();
+  return;
 }
 
-v8::Handle<v8::Value> ApoxUsbCan::SendCanBusMessage(const v8::Arguments& args)
+NAN_METHOD(ApoxUsbCan::SendCanBusMessage)
 {
-  v8::HandleScope scope;
+  Nan::HandleScope scope;
 
-  ApoxUsbCan* input = ObjectWrap::Unwrap<ApoxUsbCan>(args.This());
+  ApoxUsbCan* input = ObjectWrap::Unwrap<ApoxUsbCan>(info.This());
 
   if (!input->_opened) {
-    return scope.Close(ThrowException(v8::Exception::Error(v8::String::New("Device not opened"))));
+    Nan::ThrowError("Device not opened");
+    return;
   }
 
-  if (args.Length() < 1) {
-    return scope.Close(ThrowException(v8::Exception::Error(v8::String::New("Wrong number of arguments"))));
+  if (info.Length() < 1) {
+    Nan::ThrowError("Wrong number of arguments");
+    return;
   }
 
   // by default, we assume RTR = false (Remote Transmission Request)
   bool rtr = false;
   int argOffset = 0;
 
-  if (args[0]->IsBoolean()) {
-    rtr = args[0]->ToBoolean()->Value();
+  if (info[0]->IsBoolean()) {
+    rtr = info[0]->ToBoolean()->Value();
     argOffset = 1;
 
     // we need the id next!
-    if (args.Length() < 2) {
-      return scope.Close(ThrowException(v8::Exception::Error(v8::String::New("Wrong number of arguments"))));
+    if (info.Length() < 2) {
+      Nan::ThrowError("Wrong number of arguments");
+      return;
     }
   }
 
   // id is always required
-  if (!args[0 + argOffset]->IsNumber()) {
-    return scope.Close(ThrowException(v8::Exception::Error(v8::String::New("Wrong argument type"))));
+  if (!info[0 + argOffset]->IsNumber()) {
+    Nan::ThrowError("Wrong argument type");
+    return;
   }
 
-  unsigned int id = args[0 + argOffset]->Uint32Value();
+  unsigned int id = info[0 + argOffset]->Uint32Value();
   bool extendedId = (id >> 11) > 0;
   unsigned char* data = NULL;
   int dataLength = 0;
 
   // extendedId is optional: we assume the previous detection (29 bits or 11 bits ID)
   // data is optional: we assume empty buffer in this case
-  if (args.Length() > 1 + argOffset) {
+  if (info.Length() > 1 + argOffset) {
     // there is an extra argument, but it's not what we expect (Buffer or boolean)
-    if (!Buffer::HasInstance(args[1 + argOffset]) && !args[1 + argOffset]->IsBoolean()) {
-      return scope.Close(ThrowException(v8::Exception::Error(v8::String::New("Wrong argument type"))));
+    if (!Buffer::HasInstance(info[1 + argOffset]) && !info[1 + argOffset]->IsBoolean()) {
+      Nan::ThrowError("Wrong argument type");
+      return;
     }
 
-    if (args[1 + argOffset]->IsBoolean()) {
-      extendedId = args[1 + argOffset]->ToBoolean()->Value();
+    if (info[1 + argOffset]->IsBoolean()) {
+      extendedId = info[1 + argOffset]->ToBoolean()->Value();
 
-      if (args.Length() > 2 + argOffset) {
+      if (info.Length() > 2 + argOffset) {
         // there is an extra argument, but it's not what we expect (Buffer)
-        if (!Buffer::HasInstance(args[2 + argOffset])) {
-          return scope.Close(ThrowException(v8::Exception::Error(v8::String::New("Wrong argument type"))));
+        if (!Buffer::HasInstance(info[2 + argOffset])) {
+          Nan::ThrowError("Wrong argument type");
+          return;
         }
-        data = (unsigned char*) Buffer::Data(args[2 + argOffset]->ToObject());
-        dataLength = (int) Buffer::Length(args[2 + argOffset]->ToObject());
+        data = (unsigned char*) Buffer::Data(info[2 + argOffset]->ToObject());
+        dataLength = (int) Buffer::Length(info[2 + argOffset]->ToObject());
       }
     } else {
-      data = (unsigned char*) Buffer::Data(args[1 + argOffset]->ToObject());
-      dataLength = (int) Buffer::Length(args[1 + argOffset]->ToObject());
+      data = (unsigned char*) Buffer::Data(info[1 + argOffset]->ToObject());
+      dataLength = (int) Buffer::Length(info[1 + argOffset]->ToObject());
     }
   }
 
   if (dataLength > 8) {
-    return scope.Close(ThrowException(v8::Exception::Error(v8::String::New("Too much data, maximum 8 bytes"))));
+    Nan::ThrowError("Too much data, maximum 8 bytes");
+    return;
   }
 
   if ((input->SendCanBusMessage(rtr, id, extendedId, data, dataLength, 0x00)) < 0) {
     char message[512];
     snprintf(message, sizeof message, "Failed to send message: %s", ftdi_get_error_string(&input->_ftdic));
-    return scope.Close(ThrowException(v8::Exception::Error(v8::String::New(message))));
+    Nan::ThrowError(message);
+    return;
   }
 
-  return scope.Close(v8::Undefined());
+  info.GetReturnValue().SetUndefined();
+  return;
+
 }
 
 int ApoxUsbCan::SendBoardMessage(unsigned int command)
@@ -353,7 +371,7 @@ int ApoxUsbCan::SendCanBusMessage(bool rtr, unsigned int id, bool extendedId, un
   return UsbWrite(txFrameData, txFrameLength);
 }
 
-ApoxUsbCan::ApoxUsbCan() : ObjectWrap()
+ApoxUsbCan::ApoxUsbCan() : node::ObjectWrap()
 {
   _opened = false;
   _usbRead = false;
@@ -487,9 +505,9 @@ void ApoxUsbCan::UsbReadThread(void* arg)
   }
 }
 
-void ApoxUsbCan::UsbCanErrorEmitter(uv_async_t* w, int status)
+void ApoxUsbCan::UsbCanErrorEmitter(uv_async_t* w)
 {
-  v8::HandleScope scope; // Mandatory, otherwise you leak!
+  Nan::HandleScope scope;
 
   ApoxUsbCan* input = static_cast<ApoxUsbCan*>(w->data);
   
@@ -497,19 +515,19 @@ void ApoxUsbCan::UsbCanErrorEmitter(uv_async_t* w, int status)
     UsbCanError* error = input->_usbCanErrorQueue.front();
 
     v8::Local<v8::Value> args[2];
-    args[0] = v8::Local<v8::Value>::New(symbol_error);
-    args[1] = v8::Local<v8::Value>::New(v8::String::New(error->message));
+    args[0] = Nan::New("error").ToLocalChecked();
+    args[1] = Nan::New(error->message).ToLocalChecked();
 
-    MakeCallback(input->handle_, symbol_emit, 2, args);
+    Nan::MakeCallback(input->handle(), "emit", 2, args);
 
     input->_usbCanErrorQueue.pop();
     delete error;
   }
 }
 
-void ApoxUsbCan::BoardMessageEmitter(uv_async_t* w, int status)
+void ApoxUsbCan::BoardMessageEmitter(uv_async_t* w)
 {
-  v8::HandleScope scope; // Mandatory, otherwise you leak!
+  Nan::HandleScope scope;
 
   ApoxUsbCan* input = static_cast<ApoxUsbCan*>(w->data);
 
@@ -517,28 +535,26 @@ void ApoxUsbCan::BoardMessageEmitter(uv_async_t* w, int status)
     BoardMessage* message = input->_boardMessageQueue.front();
 
     v8::Local<v8::Value> args[4];
-    args[0] = v8::Local<v8::Value>::New(symbol_boardmessage);
-    args[1] = v8::Local<v8::Value>::New(v8::Number::New(message->id));
-    args[2] = v8::Local<v8::Value>::New(v8::Number::New(message->command));
+    args[0] = Nan::New("boardmessage").ToLocalChecked();
+    args[1] = Nan::New(message->id);
+    args[2] = Nan::New(message->command);
 
     if (message->dataLength > 0) {
-      Buffer *slowBuffer = Buffer::New(message->dataLength);
-      memcpy(node::Buffer::Data(slowBuffer), (char*)message->data, message->dataLength);
-      args[3] = v8::Local<v8::Value>::New(slowBuffer->handle_);
+      args[3] = Nan::CopyBuffer((char*)message->data, message->dataLength).ToLocalChecked();
     } else {
-      args[3] = v8::Local<v8::Value>::New(v8::Undefined());
+      args[3] = Nan::Undefined();
     }
 
-    MakeCallback(input->handle_, symbol_emit, 4, args);
+    Nan::MakeCallback(input->handle(), "emit", 4, args);
 
     input->_boardMessageQueue.pop();
     delete message;
   }
 }
 
-void ApoxUsbCan::CanBusMessageEmitter(uv_async_t* w, int status)
+void ApoxUsbCan::CanBusMessageEmitter(uv_async_t* w)
 {
-  v8::HandleScope scope; // Mandatory, otherwise you leak!
+  Nan::HandleScope scope;
 
   ApoxUsbCan* input = static_cast<ApoxUsbCan*>(w->data);
 
@@ -546,22 +562,20 @@ void ApoxUsbCan::CanBusMessageEmitter(uv_async_t* w, int status)
     CanBusMessage* message = input->_canBusMessageQueue.front();
 
     v8::Local<v8::Value> args[7];
-    args[0] = v8::Local<v8::Value>::New(symbol_canbusmessage);
-    args[1] = v8::Local<v8::Value>::New(v8::Number::New(message->timestamp));
-    args[2] = v8::Local<v8::Value>::New(v8::Boolean::New(message->rtr));
-    args[3] = v8::Local<v8::Value>::New(v8::Number::New(message->id));
-    args[4] = v8::Local<v8::Value>::New(v8::Boolean::New(message->extended));
-    args[5] = v8::Local<v8::Value>::New(v8::Number::New(message->flags));
+    args[0] = Nan::New("canbusmessage").ToLocalChecked();
+    args[1] = Nan::New(message->timestamp);
+    args[2] = Nan::New(message->rtr);
+    args[3] = Nan::New(message->id);
+    args[4] = Nan::New(message->extended);
+    args[5] = Nan::New(message->flags);
 
     if (message->dataLength > 0) {
-      Buffer *slowBuffer = Buffer::New(message->dataLength);
-      memcpy(node::Buffer::Data(slowBuffer), (char*)message->data, message->dataLength);
-      args[6] = v8::Local<v8::Value>::New(slowBuffer->handle_);
+      args[3] = Nan::CopyBuffer((char*)message->data, message->dataLength).ToLocalChecked();
     } else {
-      args[6] = v8::Local<v8::Value>::New(v8::Undefined());
+      args[3] = Nan::Undefined();
     }
 
-    MakeCallback(input->handle_, symbol_emit, 7, args);
+    Nan::MakeCallback(input->handle(), "emit", 7, args);
 
     input->_canBusMessageQueue.pop();
     delete message;
@@ -678,11 +692,4 @@ CanBusMessage* CreateCanBusMessage(unsigned char* rxFrameData, int rxFrameLength
   }
 
   return message;
-}
-
-extern "C" {
-  void init(v8::Handle<v8::Object> target) {
-    ApoxUsbCan::Initialize(target);
-  }
-  NODE_MODULE(apoxusbcan, init)
 }

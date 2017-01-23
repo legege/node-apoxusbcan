@@ -22,14 +22,10 @@
 #ifndef NODE_APOXUSBCAN_H
 #define NODE_APOXUSBCAN_H
 
-#include <v8.h>
-#include <node.h>
-#include <node_buffer.h>
-#include <uv.h>
+#include <nan.h>
+
 #include <ftdi.h>
 #include <queue>
-
-using namespace node;
 
 typedef struct { 
   char message[512];
@@ -52,16 +48,16 @@ typedef struct {
   unsigned int flags;
 } CanBusMessage;
 
-class ApoxUsbCan : ObjectWrap
+class ApoxUsbCan : public node::ObjectWrap
 {
 public:
+  static NAN_MODULE_INIT(Init);
 
-  static void Initialize(v8::Handle<v8::Object> target);
-  static v8::Handle<v8::Value> New(const v8::Arguments& args);
-  static v8::Handle<v8::Value> Open(const v8::Arguments& args);
-  static v8::Handle<v8::Value> Close(const v8::Arguments& args);
-  static v8::Handle<v8::Value> SendBoardMessage(const v8::Arguments& args);
-  static v8::Handle<v8::Value> SendCanBusMessage(const v8::Arguments& args);
+  static NAN_METHOD(New);
+  static NAN_METHOD(Open);
+  static NAN_METHOD(Close);
+  static NAN_METHOD(SendBoardMessage);
+  static NAN_METHOD(SendCanBusMessage);
 
   ApoxUsbCan();
   ~ApoxUsbCan();
@@ -87,9 +83,9 @@ protected:
 
   uv_mutex_t _usbWriteMutex;
   
-  static void UsbCanErrorEmitter(uv_async_t *w, int status);
-  static void BoardMessageEmitter(uv_async_t *w, int status);
-  static void CanBusMessageEmitter(uv_async_t *w, int status);
+  static void UsbCanErrorEmitter(uv_async_t *w);
+  static void BoardMessageEmitter(uv_async_t *w);
+  static void CanBusMessageEmitter(uv_async_t *w);
 
   int SendBoardMessage(unsigned int command);
   int SendCanBusMessage(bool rtr, unsigned int id, bool extendedId, unsigned char* data, int dataLength, unsigned int txFlags);
@@ -97,6 +93,8 @@ protected:
 
   static void UsbReadThread(void* arg);
 
+private:
+  static Nan::Persistent<v8::Function> constructor;
 };
 
 #endif
