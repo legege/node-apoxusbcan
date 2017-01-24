@@ -225,8 +225,8 @@ NAN_METHOD(ApoxUsbCan::SendBoardMessage)
     Nan::ThrowError("Wrong argument type");
     return;
   }
-
-  unsigned int command = info[0]->ToUint32()->Value();
+  
+  unsigned int command = Nan::To<v8::Uint32>(info[0]).ToLocalChecked()->Value();
 
   if (input->SendBoardMessage(command) < 0) {
     char message[512];
