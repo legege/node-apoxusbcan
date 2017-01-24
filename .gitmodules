@@ -3,4 +3,4 @@
 	url = git://github.com/legege/libftdi.git
 [submodule "deps/libusb"]
 	path = deps/libusb
-	url = git@github.com:kevinmehall/libusb.git
+	url = git://github.com/kevinmehall/libusb.git
