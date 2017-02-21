@@ -104,8 +104,8 @@ NAN_METHOD(ApoxUsbCan::Open)
     return;
   }
 
-  input->_ftdic.usb_read_timeout = 378;
-  input->_ftdic.usb_write_timeout = 128;
+  input->_ftdic.usb_read_timeout = 5000;
+  input->_ftdic.usb_write_timeout = 5000;
 
   if (ftdi_usb_open(&input->_ftdic, FTDI_VID, FTDI_PID) < 0) {
     Nan::ThrowError(v8::String::Concat(Nan::New("Unable to open FTDI USB device: ").ToLocalChecked(),
@@ -399,9 +399,7 @@ void ApoxUsbCan::UsbReadThread(void* arg)
     int bytesRead = 0;
 
     if ((bytesRead = ftdi_read_data(&input->_ftdic, &inByte, 1)) < 0) {
-      RAISE_USBCANERROR(input, "Failed to read USB data (%s, %d). Killing read thread!", ftdi_get_error_string(&input->_ftdic), bytesRead);
-      //input->_usbRead = false;
-      //break;
+      RAISE_USBCANERROR(input, "Failed to read USB data (%s, %d)", ftdi_get_error_string(&input->_ftdic), bytesRead);
       continue;
     }
 
