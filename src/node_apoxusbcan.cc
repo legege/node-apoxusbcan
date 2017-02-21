@@ -97,7 +97,7 @@ NAN_METHOD(ApoxUsbCan::Open)
 {
   Nan::HandleScope scope;
 
-  ApoxUsbCan* input = ObjectWrap::Unwrap<ApoxUsbCan>(info.This());
+  ApoxUsbCan* input = Nan::ObjectWrap::Unwrap<ApoxUsbCan>(info.Holder());
 
   if (input->_opened) {
     info.GetReturnValue().SetUndefined();
@@ -174,7 +174,7 @@ NAN_METHOD(ApoxUsbCan::Close)
 {
   Nan::HandleScope scope;
 
-  ApoxUsbCan* input = ObjectWrap::Unwrap<ApoxUsbCan>(info.This());
+  ApoxUsbCan* input = Nan::ObjectWrap::Unwrap<ApoxUsbCan>(info.Holder());
 
   if (!input->_opened) {
     info.GetReturnValue().SetUndefined();
@@ -209,7 +209,7 @@ NAN_METHOD(ApoxUsbCan::SendBoardMessage)
 {
   Nan::HandleScope scope;
 
-  ApoxUsbCan* input = ObjectWrap::Unwrap<ApoxUsbCan>(info.This());
+  ApoxUsbCan* input = Nan::ObjectWrap::Unwrap<ApoxUsbCan>(info.Holder());
 
   if (!input->_opened) {
     Nan::ThrowError("Device not opened");
@@ -243,7 +243,7 @@ NAN_METHOD(ApoxUsbCan::SendCanBusMessage)
 {
   Nan::HandleScope scope;
 
-  ApoxUsbCan* input = ObjectWrap::Unwrap<ApoxUsbCan>(info.This());
+  ApoxUsbCan* input = Nan::ObjectWrap::Unwrap<ApoxUsbCan>(info.Holder());
 
   if (!input->_opened) {
     Nan::ThrowError("Device not opened");
@@ -371,7 +371,7 @@ int ApoxUsbCan::SendCanBusMessage(bool rtr, unsigned int id, bool extendedId, un
   return UsbWrite(txFrameData, txFrameLength);
 }
 
-ApoxUsbCan::ApoxUsbCan() : node::ObjectWrap()
+ApoxUsbCan::ApoxUsbCan() : Nan::ObjectWrap()
 {
   _opened = false;
   _usbRead = false;
@@ -399,9 +399,10 @@ void ApoxUsbCan::UsbReadThread(void* arg)
     int bytesRead = 0;
 
     if ((bytesRead = ftdi_read_data(&input->_ftdic, &inByte, 1)) < 0) {
-      RAISE_USBCANERROR(input, "Failed to read USB data (%s). Killing read thread!", ftdi_get_error_string(&input->_ftdic));
-      input->_usbRead = false;
-      break;
+      RAISE_USBCANERROR(input, "Failed to read USB data (%s, %d). Killing read thread!", ftdi_get_error_string(&input->_ftdic), bytesRead);
+      //input->_usbRead = false;
+      //break;
+      continue;
     }
 
     if (bytesRead == 0) {
@@ -570,9 +571,9 @@ void ApoxUsbCan::CanBusMessageEmitter(uv_async_t* w)
     args[5] = Nan::New(message->flags);
 
     if (message->dataLength > 0) {
-      args[3] = Nan::CopyBuffer((char*)message->data, message->dataLength).ToLocalChecked();
+      args[6] = Nan::CopyBuffer((char*)message->data, message->dataLength).ToLocalChecked();
     } else {
-      args[3] = Nan::Undefined();
+      args[6] = Nan::Undefined();
     }
 
     Nan::MakeCallback(input->handle(), "emit", 7, args);

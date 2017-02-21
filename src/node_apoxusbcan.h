@@ -48,7 +48,7 @@ typedef struct {
   unsigned int flags;
 } CanBusMessage;
 
-class ApoxUsbCan : public node::ObjectWrap
+class ApoxUsbCan : public Nan::ObjectWrap
 {
 public:
   static NAN_MODULE_INIT(Init);
