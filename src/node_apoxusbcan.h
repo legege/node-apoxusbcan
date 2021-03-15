@@ -95,6 +95,7 @@ protected:
 
 private:
   static Nan::Persistent<v8::Function> constructor;
+  Nan::AsyncResource *async_resource;
 };
 
 #endif
