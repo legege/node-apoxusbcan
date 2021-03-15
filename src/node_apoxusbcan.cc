@@ -108,37 +108,43 @@ NAN_METHOD(ApoxUsbCan::Open)
   input->_ftdic.usb_write_timeout = 5000;
 
   if (ftdi_usb_open(&input->_ftdic, FTDI_VID, FTDI_PID) < 0) {
-    Nan::ThrowError(v8::String::Concat(Nan::New("Unable to open FTDI USB device: ").ToLocalChecked(),
+    Nan::ThrowError(v8::String::Concat(info.GetIsolate(),
+                                       Nan::New("Unable to open FTDI USB device: ").ToLocalChecked(),
                                        Nan::New(ftdi_get_error_string(&input->_ftdic)).ToLocalChecked()));
     return;
   }
 
   if (ftdi_usb_reset(&input->_ftdic) < 0) {
-    Nan::ThrowError(v8::String::Concat(Nan::New("Unable to reset FTDI USB device: ").ToLocalChecked(),
+    Nan::ThrowError(v8::String::Concat(info.GetIsolate(),
+                                       Nan::New("Unable to reset FTDI USB device: ").ToLocalChecked(),
                                        Nan::New(ftdi_get_error_string(&input->_ftdic)).ToLocalChecked()));
     return;
   }
 
   if (ftdi_usb_purge_buffers(&input->_ftdic) < 0) {
-    Nan::ThrowError(v8::String::Concat(Nan::New("Unable to purge FTDI USB buffers: ").ToLocalChecked(),
+    Nan::ThrowError(v8::String::Concat(info.GetIsolate(),
+                                       Nan::New("Unable to purge FTDI USB buffers: ").ToLocalChecked(),
                                        Nan::New(ftdi_get_error_string(&input->_ftdic)).ToLocalChecked()));
     return;
   }
 
   if (ftdi_write_data_set_chunksize(&input->_ftdic, 2048) < 0) {
-    Nan::ThrowError(v8::String::Concat(Nan::New("Unable to set FTDI USB write data chunksize: ").ToLocalChecked(),
+    Nan::ThrowError(v8::String::Concat(info.GetIsolate(),
+                                       Nan::New("Unable to set FTDI USB write data chunksize: ").ToLocalChecked(),
                                        Nan::New(ftdi_get_error_string(&input->_ftdic)).ToLocalChecked()));
     return;
   }
 
   if (ftdi_read_data_set_chunksize(&input->_ftdic, 2048) < 0) {
-    Nan::ThrowError(v8::String::Concat(Nan::New("Unable to set FTDI USB read data chunksize: ").ToLocalChecked(),
+    Nan::ThrowError(v8::String::Concat(info.GetIsolate(),
+                                       Nan::New("Unable to set FTDI USB read data chunksize: ").ToLocalChecked(),
                                        Nan::New(ftdi_get_error_string(&input->_ftdic)).ToLocalChecked()));
     return;
   }
 
   if (ftdi_set_latency_timer(&input->_ftdic, 1) < 0) {
-    Nan::ThrowError(v8::String::Concat(Nan::New("Unable to set FTDI USB latency timer: ").ToLocalChecked(),
+    Nan::ThrowError(v8::String::Concat(info.GetIsolate(),
+                                       Nan::New("Unable to set FTDI USB latency timer: ").ToLocalChecked(),
                                        Nan::New(ftdi_get_error_string(&input->_ftdic)).ToLocalChecked()));
     return;
   }
@@ -194,7 +200,8 @@ NAN_METHOD(ApoxUsbCan::Close)
  
   // Close USB
   if (ftdi_usb_close(&input->_ftdic) < 0) {
-    Nan::ThrowError(v8::String::Concat(Nan::New("Unable to close FTDI USB device: ").ToLocalChecked(),
+    Nan::ThrowError(v8::String::Concat(info.GetIsolate(),
+                                       Nan::New("Unable to close FTDI USB device: ").ToLocalChecked(),
                                        Nan::New(ftdi_get_error_string(&input->_ftdic)).ToLocalChecked()));
     return;
   }
@@ -260,7 +267,7 @@ NAN_METHOD(ApoxUsbCan::SendCanBusMessage)
   int argOffset = 0;
 
   if (info[0]->IsBoolean()) {
-    rtr = info[0]->ToBoolean()->Value();
+    rtr = Nan::To<bool>(info[0]).FromJust();
     argOffset = 1;
 
     // we need the id next!
@@ -276,7 +283,7 @@ NAN_METHOD(ApoxUsbCan::SendCanBusMessage)
     return;
   }
 
-  unsigned int id = info[0 + argOffset]->Uint32Value();
+  unsigned int id = info[0 + argOffset]->Uint32Value(Nan::GetCurrentContext()).FromJust();
   bool extendedId = (id >> 11) > 0;
   unsigned char* data = NULL;
   int dataLength = 0;
@@ -291,7 +298,7 @@ NAN_METHOD(ApoxUsbCan::SendCanBusMessage)
     }
 
     if (info[1 + argOffset]->IsBoolean()) {
-      extendedId = info[1 + argOffset]->ToBoolean()->Value();
+      extendedId = Nan::To<bool>(info[1 + argOffset]).FromJust();
 
       if (info.Length() > 2 + argOffset) {
         // there is an extra argument, but it's not what we expect (Buffer)
@@ -299,12 +306,14 @@ NAN_METHOD(ApoxUsbCan::SendCanBusMessage)
           Nan::ThrowError("Wrong argument type");
           return;
         }
-        data = (unsigned char*) Buffer::Data(info[2 + argOffset]->ToObject());
-        dataLength = (int) Buffer::Length(info[2 + argOffset]->ToObject());
+        Nan::MaybeLocal<v8::Object> m = Nan::To<v8::Object>(info[2 + argOffset]);
+        data = (unsigned char*) Buffer::Data(m.ToLocalChecked());
+        dataLength = (int) Buffer::Length(m.ToLocalChecked());
       }
     } else {
-      data = (unsigned char*) Buffer::Data(info[1 + argOffset]->ToObject());
-      dataLength = (int) Buffer::Length(info[1 + argOffset]->ToObject());
+      Nan::MaybeLocal<v8::Object> m = Nan::To<v8::Object>(info[1 + argOffset]);
+      data = (unsigned char*) Buffer::Data(m.ToLocalChecked());
+      dataLength = (int) Buffer::Length(m.ToLocalChecked());
     }
   }
 
@@ -377,12 +386,14 @@ ApoxUsbCan::ApoxUsbCan() : Nan::ObjectWrap()
   _usbRead = false;
   ftdi_init(&_ftdic);
   uv_mutex_init(&_usbWriteMutex);
+  async_resource = new Nan::AsyncResource("ApoxUsbCan");
 }
 
 ApoxUsbCan::~ApoxUsbCan()
 {
   uv_mutex_destroy(&_usbWriteMutex);
   ftdi_deinit(&_ftdic);
+  delete async_resource;
 }
 
 void ApoxUsbCan::UsbReadThread(void* arg)
@@ -517,7 +528,7 @@ void ApoxUsbCan::UsbCanErrorEmitter(uv_async_t* w)
     args[0] = Nan::New("error").ToLocalChecked();
     args[1] = Nan::New(error->message).ToLocalChecked();
 
-    Nan::MakeCallback(input->handle(), "emit", 2, args);
+    input->async_resource->runInAsyncScope(input->handle(), "emit", 2, args);
 
     input->_usbCanErrorQueue.pop();
     delete error;
@@ -544,7 +555,7 @@ void ApoxUsbCan::BoardMessageEmitter(uv_async_t* w)
       args[3] = Nan::Undefined();
     }
 
-    Nan::MakeCallback(input->handle(), "emit", 4, args);
+    input->async_resource->runInAsyncScope(input->handle(), "emit", 4, args);
 
     input->_boardMessageQueue.pop();
     delete message;
@@ -574,7 +585,7 @@ void ApoxUsbCan::CanBusMessageEmitter(uv_async_t* w)
       args[6] = Nan::Undefined();
     }
 
-    Nan::MakeCallback(input->handle(), "emit", 7, args);
+    input->async_resource->runInAsyncScope(input->handle(), "emit", 7, args);
 
     input->_canBusMessageQueue.pop();
     delete message;
