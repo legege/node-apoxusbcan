@@ -174,9 +174,9 @@ function(id, responseCommand, data) {
 #### usbcan.sendCanBusMessage([rtr], canId, [extendedCanId], [canData])
 
 ``` js
-usbcan.sendCanBusMessage(418053888, new Buffer([0x00, 0xee, 0x00]));
-usbcan.sendCanBusMessage(418053888, true, new Buffer([0x00, 0xee, 0x00]));
-usbcan.sendCanBusMessage(false, 418053888, true, new Buffer([0x00, 0xee, 0x00]));
+usbcan.sendCanBusMessage(418053888, Buffer.from([0x00, 0xee, 0x00]));
+usbcan.sendCanBusMessage(418053888, true, Buffer.from([0x00, 0xee, 0x00]));
+usbcan.sendCanBusMessage(false, 418053888, true, Buffer.from([0x00, 0xee, 0x00]));
 ```
 
   * `usbcan` must be opened

@@ -47,7 +47,7 @@ usbcan.switchToMainCode(function(err) {
   var source = 0;
   var destination = 255;
   var canId = (priority << 26) | ((pgn | destination) << 8) | source;
-  var canData = new Buffer([0x00, 0xee, 0x00]); // ISO Address Claim
+  var canData = Buffer.from([0x00, 0xee, 0x00]); // ISO Address Claim
 
   console.log('Sending CAN Bus message');
   usbcan.sendCanBusMessage(canId, canData);
