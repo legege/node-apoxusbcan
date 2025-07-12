@@ -11,10 +11,11 @@
         'src/addon.cc',
         'src/node_apoxusbcan.cc'
       ],
+      'cflags_cc': [ '-std=c++17' ],
       "conditions": [
         ['OS=="mac"', {
           'xcode_settings': {
-            'OTHER_CFLAGS': [ '-std=c++1y', '-stdlib=libc++' ],
+            'OTHER_CFLAGS': [ '-std=c++17', '-stdlib=libc++' ],
             'OTHER_LDFLAGS': [ '-framework', 'CoreFoundation', '-framework', 'IOKit' ],
             'SDKROOT': 'macosx',
             'MACOSX_DEPLOYMENT_TARGET': '10.7',
