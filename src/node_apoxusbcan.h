@@ -58,6 +58,7 @@ public:
   static NAN_METHOD(Close);
   static NAN_METHOD(SendBoardMessage);
   static NAN_METHOD(SendCanBusMessage);
+  static NAN_METHOD(UsbWrite);
 
   ApoxUsbCan();
   ~ApoxUsbCan();

@@ -75,6 +75,7 @@ NAN_MODULE_INIT(ApoxUsbCan::Init)
   Nan::SetPrototypeMethod(tpl, "close", ApoxUsbCan::Close);
   Nan::SetPrototypeMethod(tpl, "sendBoardMessage", ApoxUsbCan::SendBoardMessage);
   Nan::SetPrototypeMethod(tpl, "sendCanBusMessage", ApoxUsbCan::SendCanBusMessage);
+  Nan::SetPrototypeMethod(tpl, "usbWrite", ApoxUsbCan::UsbWrite);
 
   constructor.Reset(Nan::GetFunction(tpl).ToLocalChecked());
   Nan::Set(target, Nan::New("ApoxUsbCan").ToLocalChecked(), Nan::GetFunction(tpl).ToLocalChecked());
@@ -332,6 +333,31 @@ NAN_METHOD(ApoxUsbCan::SendCanBusMessage)
   info.GetReturnValue().SetUndefined();
   return;
 
+}
+
+NAN_METHOD(ApoxUsbCan::UsbWrite)
+{
+  Nan::HandleScope scope;
+
+  ApoxUsbCan* input = Nan::ObjectWrap::Unwrap<ApoxUsbCan>(info.Holder());
+
+  if (!input->_opened) {
+    Nan::ThrowError("Device not opened");
+    return;
+  }
+
+  if (info.Length() < 1 || !info[0]->IsObject() || !node::Buffer::HasInstance(info[0])) {
+    Nan::ThrowError("First argument must be a Buffer");
+    return;
+  }
+
+  v8::Local<v8::Object> bufferObj = info[0]->ToObject(Nan::GetCurrentContext()).ToLocalChecked();
+  unsigned char* data = (unsigned char*)node::Buffer::Data(bufferObj);
+  int length = (int)node::Buffer::Length(bufferObj);
+
+  int rc = input->UsbWrite(data, length);
+
+  info.GetReturnValue().Set(Nan::New(rc));
 }
 
 int ApoxUsbCan::SendBoardMessage(unsigned int command)
