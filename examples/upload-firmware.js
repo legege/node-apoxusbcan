@@ -25,7 +25,7 @@ const fs = require('fs');
 
 const USB_START_DOWNLOAD = 0x53; //'S'
 const USB_END_DOWNLOAD = 0x45; //'E'
-const FIRMWARE_FILE = './examples/firmwares/usbcan4_V4.3.HEX';
+const FIRMWARE_FILE = './examples/firmwares/usbcan4_4_1.HEX';
 
 function readHexFile(fileName, size = 0x10000) {
   let hex_eof = false;
