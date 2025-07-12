@@ -160,7 +160,7 @@ ApoxUsbCan.prototype.isMainCodeRunning = function(callback) {
       } else if (data[0] == 0x55) {
         if (callback) callback(null, false);
       } else {
-        if (callback) callback("Unexpected running code");
+        if (callback) callback("Unexpected running code: " + data[0]);
       }
     }
   }, 2); // notice here the retry!
