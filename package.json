@@ -1,6 +1,6 @@
 {
   "name": "apoxusbcan",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Apox Controls USB-CAN module driver",
   "license": "MIT",
   "author": {
@@ -22,6 +22,6 @@
     "nan": "^2.14.0"
   },
   "engines": {
-    "node": ">=10"
+    "node": ">=18 <20"
   }
 }
